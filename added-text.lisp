@@ -3,6 +3,9 @@
 (in-package #:added-text)
 
 ;;; "added-text" goes here. Hacks and glory await!
+(defglobal *title* "added text")
+
+(defglobal *debug* nil)
 
 (defenum:defenum *enum-game-state* ((+game-menu+ 0)
                                     +game-play+
@@ -14,7 +17,11 @@
 (defglobal *game-state* +game-menu+)
 (defglobal *level-state* +level-play+)
 
-(defglobal *title* "added text")
+(defglobal *rect-depth* 0.0)
+
+(defun update-window-title (window title)
+  (cl-glfw3:set-window-title (format nil "~A" title)
+                             window))
 
 (defun init ()
   (setf *random-state* (make-random-state t))
@@ -24,8 +31,8 @@
                                     #p"./data/shaders/rect.f.glsl")))
     (setf *program-manager* (make-instance 'program-manager)
           *texture-manager* (make-instance 'texture-manager)
-          *sprite-renderer* (make-instance 'sprite-renderer :program sprite-program)
-          *rect-renderer* (make-instance 'rect-renderer :program rect-program))
+          *sprite-drawer* (make-instance 'sprite-drawer :program sprite-program)
+          *rect-drawer* (make-instance 'rect-drawer :program rect-program))
     (load-program "sprite" sprite-program)
     (load-program "rect" rect-program)
 
@@ -52,7 +59,7 @@
                             (cfloat *width*)
                             (cfloat *height*)
                             0.0
-                            -1.0 1.0))
+                            -100.0 100.0))
      ;; (vector (kit.math:perspective-matrix (kit.glm:deg-to-rad 45.0)
      ;;                               (cfloat (/ *width* *height*))
      ;;                               -2.1
@@ -77,12 +84,40 @@
   ;;             *matrices*)
   )
 
-(defun handle-input ())
+(defun handle-input ()
+  (when (key-action-p :escape :press)
+    (glfw:set-window-should-close))
+  (when (mouse-button-action-p :left :press)
+    (add-entity (map (:pos (vec3 (cfloat *cursor-x*)
+                                 (cfloat *cursor-y*)
+                                 (cfloat *rect-depth*)))
+                     (:size (vec2 50.0 50.0))
+                     (:color (vec4 1.0 1.0 1.0 0.5))))))
 
-(defun update ())
-(defun render ())
+(defun update ()
+  (when *scroll-callback-p*
+    (incf *rect-depth* (cfloat *scroll-y*))
+    (print *rect-depth*)))
 
-(defun run ()
+(defun render-entities ()
+  (do-map (id entity *entities*)
+    (declare (ignore id))
+    (rect-draw (@ entity :pos)
+               (@ entity :size)
+               (@ entity :color)
+               0.0)))
+
+(defun render ()
+  (gl:clear-color 0.0 0.0 0.0 1.0)
+  (gl:clear :color-buffer-bit :depth-buffer-bit)
+  (render-entities))
+
+(defun cleanup ()
+  (clear-resources *program-manager*)
+  (clear-resources *texture-manager*)
+  t)
+
+(defun run () 
   (glfw:with-init-window (:title *title*
                           :width *width*
                           :height *height*
@@ -99,16 +134,15 @@
     ;; (glfw:swap-interval 1)
     (setf %gl:*gl-get-proc-address* #'glfw:get-proc-address)
 
-    ;; initialize
     (unless (gl::features-present-p (>= :glsl-version 3.3))
-      ;;destroys the window cuz of unwind-protect
-      (return-from game nil))
+      (return-from run nil))
 
+    ;; initialize
     (initialize-globals)
     (init)
 
     (gl:enable :blend)
-    (gl:disable :depth-test)
+    (gl:enable :depth-test)
     (gl:blend-func :src-alpha :one-minus-src-alpha)
 
     (glfw:set-key-callback 'key-callback)
