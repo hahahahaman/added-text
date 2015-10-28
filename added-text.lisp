@@ -90,44 +90,7 @@
     ;; (load-texture "complete"
     ;;               (make-texture2d "./data/images/complete.png" t))
 
-    ;; (load-font "sans" sans)
-    (freetype2:set-pixel-sizes sans 0 48)
-    ;; (freetype2:set-char-size sans 0 (* 14 64) 72 72)
-    ;; disable byte-alignment restriction
-    (gl:pixel-store :unpack-alignment 1)
-
-    ;; first 128 ASCII chars
-    (iter (for c from 0 below 128)
-      ;; (freetype2:load-char sans c '(:default :render))
-      (multiple-value-bind (bitmap advance left top)
-          (freetype2:default-load-render sans (code-char c) nil)
-        ;; (format t "~a ~a ~a~%" advance top left)
-        (let ((texture (first (gl:gen-textures 1)))
-              (width (freetype2-types:ft-bitmap-width bitmap))
-              (rows (freetype2-types:ft-bitmap-rows bitmap)))
-          (gl:bind-texture :texture-2d texture)
-          (gl:tex-image-2d
-           :texture-2d
-           0
-           :red
-           width
-           rows
-           0
-           :red
-           :unsigned-byte
-           (freetype2-types:ft-bitmap-buffer bitmap))
-
-          (gl:tex-parameter :texture-2d :texture-wrap-s :clamp-to-edge)
-          (gl:tex-parameter :texture-2d :texture-wrap-t :clamp-to-edge)
-          (gl:tex-parameter :texture-2d :texture-min-filter :linear)
-          (gl:tex-parameter :texture-2d :texture-mag-filter :linear)
-
-          (with! (text-chars *text-drawer*) (code-char c)
-                 (make-text-char :texture-id texture
-                                 :size (ivec2 width rows)
-                                 :bearing (ivec2 left top)
-                                 :advance advance)))))
-    (gl:bind-texture :texture-2d 0)
+    (load-font "sans24" sans 24)
 
     ;; use current program
     (let ((proj
@@ -203,7 +166,8 @@
   (gl:clear :color-buffer-bit
             :depth-buffer)
   ;; (render-entities)
-  (text-draw "abcHgcasdfas"
+  (text-draw "\"I'm going to kill myself.\""
+             (get-font "sans24")
              :position (vec2 0.0 100.0)
              :scale (vec2 1.0 1.0)))
 
@@ -247,16 +211,16 @@
     ;; (glfw:set-input-mode :cursor :disabled)
 
     (iter (until (glfw:window-should-close-p))
-          (update-swank)
-          (update-window-title cl-glfw3:*window* *title*)
+      (update-swank)
+      (update-window-title cl-glfw3:*window* *title*)
 
-          (glfw:poll-events)
+      (glfw:poll-events)
 
-          (handle-input)
-          (render)
-          (update)
+      (handle-input)
+      (render)
+      (update)
 
-          (glfw:swap-buffers)
-          (update-globals))
+      (glfw:swap-buffers)
+      (update-globals))
 
     (cleanup)))
