@@ -71,7 +71,7 @@
                                     #p"./data/shaders/rect.f.glsl"))
         (text-program (make-program #p"./data/shaders/text.v.glsl"
                                     #p"./data/shaders/text.f.glsl"))
-        (sans (new-face "./data/fonts/DejaVuSans.ttf")))
+        (sans (ft2:new-face "./data/fonts/DejaVuSans.ttf")))
     (setf *program-manager* (make-instance 'program-manager)
           *texture-manager* (make-instance 'texture-manager)
           *font-manager* (make-instance 'font-manager)
@@ -90,40 +90,44 @@
     ;; (load-texture "complete"
     ;;               (make-texture2d "./data/images/complete.png" t))
 
-
-    ;; (load-font "sans14" sans)
+    ;; (load-font "sans" sans)
     (freetype2:set-pixel-sizes sans 0 48)
+    ;; (freetype2:set-char-size sans 0 (* 14 64) 72 72)
     ;; disable byte-alignment restriction
-    (gl:pixel-store-i :unpack-alignment 1)
+    (gl:pixel-store :unpack-alignment 1)
 
     ;; first 128 ASCII chars
     (iter (for c from 0 below 128)
-          ;; (freetype2:load-char sans c :render)
-          (multiple-value-bind (bitmap advance top left)
-              (freetype2:default-load-render sans (code-char c))
-            (let ((texture (first (gl:gen-textures 1)))
-                  (width (freetype2-types:ft-bitmap-width bitmap))
-                  (rows (freetype2-types:ft-bitmap-rows bitmap)))
-              (gl:bind-texture :texture-2d texture)
-              (gl:tex-image-2d
-               :texture-2d
-               0
-               :red
-               width
-               rows
-               0
-               :red
-               :unsigned-byte
-               (freetype2-types:ft-bitmap-buffer bitmap))
-              (gl:tex-parameter-i :texture-2d :texture-wrap-s :clamp-to-edge)
-              (gl:tex-parameter-i :texture-2d :texture-wrap-t :clamp-to-edge)
-              (gl:tex-parameter-i :texture-2d :texture-min-filter :linear)
-              (gl:tex-parameter-i :texture-2d :texture-mag-filter :linear)
-              (with! (text-chars text-drawer) (code-char c)
-                     (make-text-char :texture-id texture
-                                     :size (ivec2 width rows)
-                                     :bearing (ivec2 left top)
-                                     :advance advance)))))
+      ;; (freetype2:load-char sans c '(:default :render))
+      (multiple-value-bind (bitmap advance left top)
+          (freetype2:default-load-render sans (code-char c) nil)
+        ;; (format t "~a ~a ~a~%" advance top left)
+        (let ((texture (first (gl:gen-textures 1)))
+              (width (freetype2-types:ft-bitmap-width bitmap))
+              (rows (freetype2-types:ft-bitmap-rows bitmap)))
+          (gl:bind-texture :texture-2d texture)
+          (gl:tex-image-2d
+           :texture-2d
+           0
+           :red
+           width
+           rows
+           0
+           :red
+           :unsigned-byte
+           (freetype2-types:ft-bitmap-buffer bitmap))
+
+          (gl:tex-parameter :texture-2d :texture-wrap-s :clamp-to-edge)
+          (gl:tex-parameter :texture-2d :texture-wrap-t :clamp-to-edge)
+          (gl:tex-parameter :texture-2d :texture-min-filter :linear)
+          (gl:tex-parameter :texture-2d :texture-mag-filter :linear)
+
+          (with! (text-chars *text-drawer*) (code-char c)
+                 (make-text-char :texture-id texture
+                                 :size (ivec2 width rows)
+                                 :bearing (ivec2 left top)
+                                 :advance advance)))))
+    (gl:bind-texture :texture-2d 0)
 
     ;; use current program
     (let ((proj
@@ -152,6 +156,12 @@
 
       (gl:use-program (id rect-program))
       (gl:uniform-matrix-4fv (get-uniform rect-program "projection")
+                             proj
+                             nil)
+
+      (gl:use-program (id text-program))
+      (gl:uniformi (get-uniform text-program "text") 0)
+      (gl:uniform-matrix-4fv (get-uniform text-program "projection")
                              proj
                              nil)))
 
@@ -183,15 +193,19 @@
 (defun render-entities ()
   (do-map (id entity *entities*)
     (declare (ignore id))
-    (rect-draw (@ entity :pos)
-               (@ entity :size)
-               (@ entity :color)
-               0.0)))
+    (rect-draw :position (@ entity :pos)
+               :size (@ entity :size)
+               :color (@ entity :color)
+               :rotate 0.0)))
 
 (defun render ()
-  (gl:clear-color 0.0 0.0 0.0 1.0)
-  (gl:clear :color-buffer-bit :depth-buffer-bit)
-  (render-entities))
+  (gl:clear-color 0.18 0.24 0.18 0.25)
+  (gl:clear :color-buffer-bit
+            :depth-buffer)
+  ;; (render-entities)
+  (text-draw "abcHgcasdfas"
+             :position (vec2 0.0 100.0)
+             :scale (vec2 1.0 1.0)))
 
 (defun cleanup ()
   (clear-resources *program-manager*)
@@ -223,7 +237,6 @@
     (init)
 
     (gl:enable :blend)
-    (gl:enable :cull-face)
     (gl:enable :depth-test)
     (gl:blend-func :src-alpha :one-minus-src-alpha)
 
