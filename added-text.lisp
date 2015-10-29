@@ -3,9 +3,6 @@
 (in-package #:added-text)
 
 ;;; "added-text" goes here. Hacks and glory await!
-(defglobal *title* "added text")
-
-(defglobal *debug* nil)
 
 (defenum:defenum *enum-game-state* ((+game-menu+ 0)
                                     +game-play+
@@ -19,33 +16,18 @@
 
 (defglobal *rect-depth* 0.0)
 
-(defun update-window-title (window title)
-  (cl-glfw3:set-window-title (format nil "~A" title)
-                             window))
+(defstruct screen
+  (hooks (empty-map)))
 
-;; filepath : (checksum . hook)
-(defglobal *tracked-files* (make-hash-table :test 'equal))
-(defglobal *update-files-timer* (make-timer :end 0.5))
+(defmethod initialize-instance :after ((screen screen) &key)
+  t)
 
-(defun track-file (path hook)
-  (setf (gethash path *tracked-files*)
-        (cons (md5 (alexandria:read-file-into-string path))
-              hook)))
+(defmethod screen-add-hook ((screen screen) name hook)
+  (with! (@ (screen-hooks name) name)
+         (alexandria:appendf (@ (screen-hooks screen) name) hook)))
 
-(defun verify-files ()
-  (iter (for (path data) in-hashtable *tracked-files*)
-        (let ((checksum (car data))
-              (hook (cdr data))
-              (new-checksum (md5 (alexandria:read-file-into-string path))))
-          ;; file changed
-          (when (not (string= new-checksum checksum))
-            (funcall hook)))))
-
-(defun update-files ()
-  (timer-update *update-files-timer*)
-  (when (timer-ended? *update-files-timer*)
-    (verify-files)
-    (timer-reset *update-files-timer*)))
+(defmethod screen-run ((screen screen) name)
+  (mapcar #'funcall (@ (screen-hooks screen) name)))
 
 (defun load-rect-drawer ()
   (let ((program (make-program #p"./data/shaders/rect.v.glsl"
@@ -90,6 +72,7 @@
     ;; (load-texture "complete"
     ;;               (make-texture2d "./data/images/complete.png" t))
 
+    (load-font "sans14" sans 14)
     (load-font "sans24" sans 24)
 
     ;; use current program
@@ -127,6 +110,9 @@
       (gl:uniform-matrix-4fv (get-uniform text-program "projection")
                              proj
                              nil)))
+  (gl:enable :blend)
+  (gl:enable :depth-test)
+  (gl:blend-func :src-alpha :one-minus-src-alpha)
 
   ;; (track-vars *game-state*
   ;;             *level-state*
@@ -141,17 +127,17 @@
   (when (key-action-p :escape :press)
     (glfw:set-window-should-close))
   (when (mouse-button-action-p :left :press)
-    (add-event :code (add-entity (map (:pos (vec3 (cfloat *cursor-x*)
-                                                  (cfloat *cursor-y*)
-                                                  (cfloat *rect-depth*)))
-                                      (:size (vec2 50.0 50.0))
-                                      (:color (vec4 1.0 1.0 1.0 0.5)))))))
+    ;; (add-event :code (add-entity (map (:pos (vec3 (cfloat *cursor-x*)
+    ;;                                               (cfloat *cursor-y*)
+    ;;                                               (cfloat *rect-depth*)))
+    ;;                                   (:size (vec2 50.0 50.0))
+    ;;                                   (:color (vec4 1.0 1.0 1.0 0.5)))))
+    (glfw:set-window-should-close)))
 
 (defun update ()
   (when *scroll-callback-p*
     (incf *rect-depth* (cfloat *scroll-y*)))
-  (update-events)
-  (update-files))
+  (update-window-title cl-glfw3:*window* "abc"))
 
 (defun render-entities ()
   (do-map (id entity *entities*)
@@ -162,65 +148,35 @@
                :rotate 0.0)))
 
 (defun render ()
-  (gl:clear-color 0.18 0.24 0.18 0.25)
+  (gl:clear-color 0.33 0.26 0.36 0.25)
   (gl:clear :color-buffer-bit
             :depth-buffer)
-  ;; (render-entities)
-  (text-draw "\"I'm going to kill myself.\""
+  (render-entities)
+  (text-draw "\"I am going to kill myself.\""
              (get-font "sans24")
-             :position (vec2 0.0 100.0)
-             :scale (vec2 1.0 1.0)))
+             :position (vec2 000.0 100.0)
+             :scale (vec2 1.0 1.0)
+             :color (vec4 0.0 0.61 1.0 0.5))
+  (text-draw (format nil "~4f" (average-fps))
+             (get-font "sans14")
+             :position (vec2 0.0 0.0)
+             :scale (vec2 0.8 0.8)))
 
 (defun cleanup ()
   (clear-resources *program-manager*)
   (clear-resources *texture-manager*)
   t)
 
-(defun run ()
-  (glfw:with-init-window (:title *title*
-                          :width *width*
-                          :height *height*
-                          :opengl-forward-compat t
-                          :opengl-profile :opengl-core-profile
-                          :context-version-major 3
-                          :context-version-minor 3
-                          :decorated t
-                          :resizable nil
-                          ;;full screen mode
-                          ;; :monitor (glfw:get-primary-monitor)
-                          ;; :refresh-rate 60
-                          )
-    ;; (glfw:swap-interval 1)
-    (setf %gl:*gl-get-proc-address* #'glfw:get-proc-address)
+(defun update-window-title (window title)
+  (cl-glfw3:set-window-title (format nil "~A" title)
+                             window))
 
-    (unless (gl::features-present-p (>= :glsl-version 3.3))
-      (return-from run nil))
-
-    ;; initialize
-    (initialize-globals)
-    (init)
-
-    (gl:enable :blend)
-    (gl:enable :depth-test)
-    (gl:blend-func :src-alpha :one-minus-src-alpha)
-
-    (glfw:set-key-callback 'key-callback)
-    (glfw:set-mouse-button-callback 'mouse-callback)
-    (glfw:set-cursor-position-callback 'cursor-callback)
-    (glfw:set-scroll-callback 'scroll-callback)
-    ;; (glfw:set-input-mode :cursor :disabled)
-
-    (iter (until (glfw:window-should-close-p))
-      (update-swank)
-      (update-window-title cl-glfw3:*window* *title*)
-
-      (glfw:poll-events)
-
-      (handle-input)
-      (render)
-      (update)
-
-      (glfw:swap-buffers)
-      (update-globals))
-
-    (cleanup)))
+(defun game ()
+  (setf *window-render-hook* #'render
+        *window-update-hook* #'update)
+  (run "added text"
+       :init-code (init)
+       :input-code (handle-input)
+       :render-code (render)
+       :update-code (update)
+       :cleanup-code (cleanup)))

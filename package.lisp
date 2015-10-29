@@ -20,5 +20,5 @@
                           #:some #:every #:notany #:notevery
                           #:with)
   (:export
-   :run))
+   :game))
 
