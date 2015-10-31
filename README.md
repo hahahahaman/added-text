@@ -1,8 +1,4 @@
-## added-text
-I'm adding text rendering as a feature, so I'll make a game use this new tech.
+### added-text
+Really nothing much.
 
-Top down 2d game, with text screens.
-
-space - interact
-arrow/wasd - move
-
+Shows off new stuff I added to [err](https://github.com/hahahahaman/err).
