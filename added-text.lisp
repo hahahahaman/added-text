@@ -44,16 +44,15 @@
                            nil)))
 
 (defun init ()
-  (track-file #p"./data/shaders/rect.v.glsl" #'load-rect-drawer)
-  (track-file #p"./data/shaders/rect.f.glsl" #'load-rect-drawer)
+  ;; (track-file #p"./data/shaders/rect.v.glsl" #'load-rect-drawer)
+  ;; (track-file #p"./data/shaders/rect.f.glsl" #'load-rect-drawer)
 
   (let ((sprite-program (make-program #p"./data/shaders/sprite.v.glsl"
                                       #p"./data/shaders/sprite.f.glsl"))
         (rect-program (make-program #p"./data/shaders/rect.v.glsl"
                                     #p"./data/shaders/rect.f.glsl"))
         (text-program (make-program #p"./data/shaders/text.v.glsl"
-                                    #p"./data/shaders/text.f.glsl"))
-        (sans (ft2:new-face "./data/fonts/DejaVuSans.ttf")))
+                                    #p"./data/shaders/text.f.glsl")))
     (setf *program-manager* (make-instance 'program-manager)
           *texture-manager* (make-instance 'texture-manager)
           *font-manager* (make-instance 'font-manager)
@@ -72,8 +71,9 @@
     ;; (load-texture "complete"
     ;;               (make-texture2d "./data/images/complete.png" t))
 
-    (load-font "sans14" sans 14)
-    (load-font "sans24" sans 24)
+    (ft2:with-open-face (sans "./data/fonts/DejaVuSans.ttf" 0 (ft2:make-freetype))
+      (load-font "sans14" sans 14)
+      (load-font "sans24" sans 24))
 
     ;; use current program
     (let ((proj
@@ -131,8 +131,7 @@
                                                   (cfloat *cursor-y*)
                                                   (cfloat *rect-depth*)))
                                       (:size (vec2 50.0 50.0))
-                                      (:color (vec4 1.0 0.0 1.0 0.5)))))
-    ))
+                                      (:color (vec4 1.0 0.0 1.0 0.5)))))))
 
 (defun update ()
   (when *scroll-callback-p*
@@ -191,14 +190,14 @@
                     :position (vec3 100.0 100.0 0.0)
                     :size (vec2 300.0 300.0)
                     :rotate (glfw:get-time))
-  (let ((text "\"I am going to kill myself.\"")
+  (let ((text "\"What is love?\"")
         (font (get-font "sans24"))
         (scale (vec2 1.0 1.00)))
     (multiple-value-bind (x y) (text-dimensions text font
                                                 :scale scale)
       (text-draw text
                  font
-                 :position (vec2 (- *width* (cfloat x)) (- *height* (cfloat y)))
+                 :position (vec2 (- *width* (cfloat x) 10) (- *height* (cfloat y) 10))
                  :scale scale
                  :color (vec4 0.0 0.61 1.0 0.5))))
   (text-draw (format nil "~4f" (average-fps))
