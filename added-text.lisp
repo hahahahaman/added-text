@@ -44,8 +44,8 @@
                            nil)))
 
 (defun init ()
-  ;; (track-file #p"./data/shaders/rect.v.glsl" #'load-rect-drawer)
-  ;; (track-file #p"./data/shaders/rect.f.glsl" #'load-rect-drawer)
+  (track-file #p"./data/shaders/rect.v.glsl" #'load-rect-drawer)
+  (track-file #p"./data/shaders/rect.f.glsl" #'load-rect-drawer)
 
   (let ((sprite-program (make-program #p"./data/shaders/sprite.v.glsl"
                                       #p"./data/shaders/sprite.f.glsl"))
