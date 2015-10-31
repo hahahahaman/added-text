@@ -127,12 +127,12 @@
   (when (key-action-p :escape :press)
     (glfw:set-window-should-close))
   (when (mouse-button-action-p :left :press)
-    ;; (add-event :code (add-entity (map (:pos (vec3 (cfloat *cursor-x*)
-    ;;                                               (cfloat *cursor-y*)
-    ;;                                               (cfloat *rect-depth*)))
-    ;;                                   (:size (vec2 50.0 50.0))
-    ;;                                   (:color (vec4 1.0 1.0 1.0 0.5)))))
-    (glfw:set-window-should-close)))
+    (add-event :code (add-entity (map (:pos (vec3 (cfloat *cursor-x*)
+                                                  (cfloat *cursor-y*)
+                                                  (cfloat *rect-depth*)))
+                                      (:size (vec2 50.0 50.0))
+                                      (:color (vec4 1.0 0.0 1.0 0.5)))))
+    ))
 
 (defun update ()
   (when *scroll-callback-p*
@@ -145,18 +145,62 @@
     (rect-draw :position (@ entity :pos)
                :size (@ entity :size)
                :color (@ entity :color)
-               :rotate 0.0)))
+               :rotate 0.0
+               :draw-mode :line-strip)))
+
+(defun draw-rect-spiral (&key
+                           (n 10)
+                           (current 0)
+                           (position (vec3 0.0 0.0 0.0))
+                           (size (vec2 100.0 100.0))
+                           (rotate 0.0))
+  (when (> n current)
+    (rect-draw
+     :position position
+     :size (vec2 (* (x-val size) (/ current n))
+                 (* (y-val size) (/ current n)))
+     :color (vec4 (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) (* 2 pi)) (* 2 pi)))
+                  (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) pi) pi))
+                  (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
+                  (cfloat (mod (+ rotate (* 2 pi (/ current n))) 1.0)))
+     :rotate (+ rotate (* 2 pi (/ current n)))
+     :draw-mode :line-strip)
+    (draw-rect-spiral
+     :n n
+     :current (1+ current)
+     :position position
+     :size size
+     :rotate rotate))
+  ;; (iter (for i from current below n)
+  ;;   (rect-draw
+  ;;    :position position
+  ;;    :size (vec2 (* (x-val size) (/ i n))
+  ;;                (* (y-val size) (/ i n)))
+  ;;    :rotate (+ rotate (* 2 pi (/ i n)))
+  ;;    :draw-mode :line-strip))
+  )
 
 (defun render ()
-  (gl:clear-color 0.33 0.26 0.36 0.25)
+  (gl:clear-color 0.0 0.0 0.0 0.25)
   (gl:clear :color-buffer-bit
             :depth-buffer)
   (render-entities)
-  (text-draw "\"I am going to kill myself.\""
-             (get-font "sans24")
-             :position (vec2 000.0 100.0)
-             :scale (vec2 1.0 1.0)
-             :color (vec4 0.0 0.61 1.0 0.5))
+
+  (draw-rect-spiral :n (random-in-range 1 1000)
+                    :current 0
+                    :position (vec3 100.0 100.0 0.0)
+                    :size (vec2 300.0 300.0)
+                    :rotate (glfw:get-time))
+  (let ((text "\"I am going to kill myself.\"")
+        (font (get-font "sans24"))
+        (scale (vec2 1.0 1.00)))
+    (multiple-value-bind (x y) (text-dimensions text font
+                                                :scale scale)
+      (text-draw text
+                 font
+                 :position (vec2 (- *width* (cfloat x)) (- *height* (cfloat y)))
+                 :scale scale
+                 :color (vec4 0.0 0.61 1.0 0.5))))
   (text-draw (format nil "~4f" (average-fps))
              (get-font "sans14")
              :position (vec2 0.0 0.0)
@@ -172,8 +216,6 @@
                              window))
 
 (defun game ()
-  (setf *window-render-hook* #'render
-        *window-update-hook* #'update)
   (run "added text"
        :init-code (init)
        :input-code (handle-input)
