@@ -18,7 +18,8 @@
 (asdf:oos 'asdf:load-op 'added-text)
 
 #+sbcl
-(sb-ext:save-lisp-and-die "abc.bin"
+(sb-ext:save-lisp-and-die #+windows "abc.exe"
+                          #+(not windows)"abc.bin"
                           :toplevel (lambda ()
                                       (sb-posix:putenv
                                        (format nil "SBCL_HOME=~A"
