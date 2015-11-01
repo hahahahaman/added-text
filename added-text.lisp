@@ -71,9 +71,10 @@
     ;; (load-texture "complete"
     ;;               (make-texture2d "./data/images/complete.png" t))
 
-    (ft2:with-open-face (sans "./data/fonts/DejaVuSans.ttf" 0 (ft2:make-freetype))
-      (load-font "sans14" sans 14)
-      (load-font "sans24" sans 24))
+    (let ((lib (ft2:make-freetype)))
+      (ft2:with-open-face (sans "./data/fonts/DejaVuSans.ttf" 0 lib)
+        (load-font "sans14" sans 14)
+        (load-font "sans24" sans 24)))
 
     ;; use current program
     (let ((proj
