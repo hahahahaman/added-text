@@ -1,9 +1,9 @@
 ;;;; package.lisp
 
 (defpackage #:added-text
-  (:use #:cl #:err #:iter #:fset)
+  (:use #:cl #:err #:iterate #:fset)
   (:import-from :kit.glm #:vec2 #:vec3 #:vec4)
-  (:shadowing-import-from :iter #:iter #:while)
+  (:shadowing-import-from :iterate #:iter #:while)
   (:shadowing-import-from :fset
                           ;; Shadowed type/constructor names
                           #:set #:map
