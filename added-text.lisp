@@ -4,18 +4,7 @@
 
 ;;; "added-text" goes here. Hacks and glory await!
 
-(defenum:defenum *enum-game-state* ((+game-menu+ 0)
-                                    +game-play+
-                                    +game-help+))
-
-(defenum:defenum *enum-level-state* ((+level-play+ 0)
-                                     +level-completed+))
-
-(defglobal *game-state* +game-menu+)
-(defglobal *level-state* +level-play+)
-
-(defglobal *rect-depth* 0.0)
-
+#|
 (defstruct screen
   (hooks (empty-map)))
 
@@ -28,6 +17,9 @@
 
 (defmethod screen-run ((screen screen) name)
   (mapcar #'funcall (@ (screen-hooks screen) name)))
+|#
+
+(defglobal *rect-depth* 0.0)
 
 (defun load-rect-drawer ()
   (let ((program (make-program #p"./data/shaders/rect.v.glsl"
@@ -63,32 +55,19 @@
     (load-program "rect" rect-program)
     (load-program "text" text-program)
 
-    ;; textures
-    ;; (load-texture "menu"
-    ;;               (make-texture2d "./data/images/menu.png" t))
-    ;; (load-texture "help"
-    ;;               (make-texture2d "./data/images/help.png" t))
-    ;; (load-texture "complete"
-    ;;               (make-texture2d "./data/images/complete.png" t))
-
     (let ((lib (ft2:make-freetype)))
       (ft2:with-open-face (sans "./data/fonts/DejaVuSans.ttf" 0 lib)
-        (load-font "sans14" sans 14)
-        (load-font "sans24" sans 24)))
+                          (load-font "sans14" sans 14)
+                          (load-font "sans24" sans 24)))
 
     ;; use current program
     (let ((proj
-            ;; left, right, bottom, top, near, far
-            (kit.glm:ortho-matrix 0.0
-                                  (cfloat *width*)
-                                  (cfloat *height*)
-                                  0.0
-                                  -100.0 100.0)
-            ;; (vector (kit.math:perspective-matrix (kit.glm:deg-to-rad 45.0)
-            ;;                               (cfloat (/ *width* *height*))
-            ;;                               -2.1
-            ;;                               100.0))
-            ))
+           ;; left, right, bottom, top, near, far
+           (kit.glm:ortho-matrix 0.0
+                                 (cfloat *width*)
+                                 (cfloat *height*)
+                                 0.0
+                                 -100.0 100.0)))
 
       (gl:use-program (id sprite-program))
 
@@ -113,16 +92,7 @@
                              nil)))
   (gl:enable :blend)
   (gl:enable :depth-test)
-  (gl:blend-func :src-alpha :one-minus-src-alpha)
-
-  ;; (track-vars *game-state*
-  ;;             *level-state*
-  ;;             *difficulty*
-  ;;             *grid*
-  ;;             *final-grid*
-  ;;             *selected-matrix*
-  ;;             *matrices*)
-  )
+  (gl:blend-func :src-alpha :one-minus-src-alpha))
 
 (defun handle-input ()
   (when (key-action-p :escape :press)
@@ -149,11 +119,11 @@
                :draw-mode :line-strip)))
 
 (defun draw-rect-spiral (&key
-                           (n 10)
-                           (current 0)
-                           (position (vec3 0.0 0.0 0.0))
-                           (size (vec2 100.0 100.0))
-                           (rotate 0.0))
+                         (n 10)
+                         (current 0)
+                         (position (vec3 0.0 0.0 0.0))
+                         (size (vec2 100.0 100.0))
+                         (rotate 0.0))
   (when (> n current)
     (rect-draw
      :position position
@@ -170,15 +140,7 @@
      :current (1+ current)
      :position position
      :size size
-     :rotate rotate))
-  ;; (iter (for i from current below n)
-  ;;   (rect-draw
-  ;;    :position position
-  ;;    :size (vec2 (* (x-val size) (/ i n))
-  ;;                (* (y-val size) (/ i n)))
-  ;;    :rotate (+ rotate (* 2 pi (/ i n)))
-  ;;    :draw-mode :line-strip))
-  )
+     :rotate rotate)))
 
 (defun render ()
   (gl:clear-color 0.0 0.0 0.0 0.25)
