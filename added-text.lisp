@@ -55,19 +55,18 @@
     (load-program "rect" rect-program)
     (load-program "text" text-program)
 
-    (let ((lib (ft2:make-freetype)))
-      (ft2:with-open-face (sans "./data/fonts/DejaVuSans.ttf" 0 lib)
-                          (load-font "sans14" sans 14)
-                          (load-font "sans24" sans 24)))
+    (let ((font-path "./data/fonts/DejaVuSans.ttf"))
+      (load-font "sans14" font-path 14)
+      (load-font "sans24" font-path 24))
 
     ;; use current program
     (let ((proj
-           ;; left, right, bottom, top, near, far
-           (kit.glm:ortho-matrix 0.0
-                                 (cfloat *width*)
-                                 (cfloat *height*)
-                                 0.0
-                                 -100.0 100.0)))
+            ;; left, right, bottom, top, near, far
+            (kit.glm:ortho-matrix 0.0
+                                  (cfloat *width*)
+                                  (cfloat *height*)
+                                  0.0
+                                  -100.0 100.0)))
 
       (gl:use-program (id sprite-program))
 
@@ -119,11 +118,11 @@
                :draw-mode :line-strip)))
 
 (defun draw-rect-spiral (&key
-                         (n 10)
-                         (current 0)
-                         (position (vec3 0.0 0.0 0.0))
-                         (size (vec2 100.0 100.0))
-                         (rotate 0.0))
+                           (n 10)
+                           (current 0)
+                           (position (vec3 0.0 0.0 0.0))
+                           (size (vec2 100.0 100.0))
+                           (rotate 0.0))
   (when (> n current)
     (rect-draw
      :position position
@@ -134,7 +133,8 @@
                   (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
                   (cfloat (mod (+ rotate (* 2 pi (/ current n))) 1.0)))
      :rotate (+ rotate (* 2 pi (/ current n)))
-     :draw-mode :line-strip)
+     :draw-center (vec3 0.5 0.5 0.0)
+     :draw-mode :triangle-strip)
     (draw-rect-spiral
      :n n
      :current (1+ current)
@@ -148,10 +148,10 @@
             :depth-buffer)
   (render-entities)
 
-  (draw-rect-spiral :n (random-in-range 1 1000)
+  (draw-rect-spiral :n 100
                     :current 0
-                    :position (vec3 100.0 100.0 0.0)
-                    :size (vec2 300.0 300.0)
+                    :position (vec3 400.0 300.0 0.0)
+                    :size (vec2 200.0 200.0)
                     :rotate (glfw:get-time))
   (let ((text "\"What is love?\"")
         (font (get-font "sans24"))
