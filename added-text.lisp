@@ -178,9 +178,9 @@
                              window))
 
 (defun game ()
-  (run "added text"
-       :init-code (init)
-       :input-code (handle-input)
-       :render-code (render)
-       :update-code (update)
-       :cleanup-code (cleanup)))
+  (err-run "added text"
+           :init-code (init)
+           :input-code (handle-input)
+           :render-code (render)
+           :update-code (update)
+           :cleanup-code (cleanup)))
