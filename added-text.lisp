@@ -114,7 +114,7 @@
     (rect-draw :position (@ entity :pos)
                :size (@ entity :size)
                :color (@ entity :color)
-               :rotate 0.0
+               :rotatation 0.0
                :draw-mode :line-strip)))
 
 (defun draw-rect-spiral (&key
@@ -122,17 +122,17 @@
                            (current 0)
                            (position (vec3 0.0 0.0 0.0))
                            (size (vec2 100.0 100.0))
-                           (rotate 0.0))
+                           (rotation 0.0))
   (when (> n current)
     (rect-draw
      :position position
      :size (vec2 (* (x-val size) (/ current n))
                  (* (y-val size) (/ current n)))
-     :color (vec4 (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) (* 2 pi)) (* 2 pi)))
-                  (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) pi) pi))
-                  (cfloat (/ (mod (+ rotate (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
-                  (cfloat (mod (+ rotate (* 2 pi (/ current n))) 1.0)))
-     :rotate (+ rotate (* 2 pi (/ current n)))
+     :color (vec4 (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (* 2 pi)) (* 2 pi)))
+                  (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) pi) pi))
+                  (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
+                  (cfloat (mod (+ rotation (* 2 pi (/ current n))) 1.0)))
+     :rotation (+ rotation (* 2 pi (/ current n)))
      :draw-center (vec3 0.5 0.5 0.0)
      :draw-mode :triangle-strip)
     (draw-rect-spiral
@@ -140,7 +140,7 @@
      :current (1+ current)
      :position position
      :size size
-     :rotate rotate)))
+     :rotation rotation)))
 
 (defun render ()
   (gl:clear-color 0.0 0.0 0.0 0.25)
@@ -152,7 +152,7 @@
                     :current 0
                     :position (vec3 400.0 300.0 0.0)
                     :size (vec2 200.0 200.0)
-                    :rotate (glfw:get-time))
+                    :rotation (glfw:get-time))
   (let ((text "\"What is love?\"")
         (font (get-font "sans24"))
         (scale (vec2 1.0 1.00)))
