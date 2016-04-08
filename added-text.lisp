@@ -36,6 +36,7 @@
                            nil)))
 
 (defun init ()
+  (initialize-globals)
   (track-file #p"./data/shaders/rect.v.glsl" #'load-rect-drawer)
   (track-file #p"./data/shaders/rect.f.glsl" #'load-rect-drawer)
 
@@ -64,8 +65,8 @@
             ;; left, right, bottom, top, near, far
             (kit.glm:ortho-matrix 0.0
                                   (cfloat *width*)
-                                  (cfloat *height*)
                                   0.0
+                                  (cfloat *height*)
                                   -100.0 100.0)))
 
       (gl:use-program (id sprite-program))
@@ -97,11 +98,14 @@
   (when (key-action-p :escape :press)
     (glfw:set-window-should-close))
   (when (mouse-button-action-p :left :press)
-    (add-event :code (add-entity (map (:pos (vec3 (cfloat *cursor-x*)
-                                                  (cfloat *cursor-y*)
-                                                  (cfloat *rect-depth*)))
-                                      (:size (vec2 50.0 50.0))
-                                      (:color (vec4 1.0 0.0 1.0 0.5)))))))
+    (add-event :code (add-entity (map (:pos (vec3f (cfloat *cursor-x*)
+                                                   (- *height* (cfloat *cursor-y*))
+                                                   (cfloat *rect-depth*)))
+                                      (:size (vec2f 50.0 50.0))
+                                      (:color (vec4f 1.0 0.0 1.0 0.5))))))
+  (when (and (key-pressed-p :left-control)
+             (key-action-p :r :press))
+    (add-event :code (setf *entities* (empty-map)))))
 
 (defun update ()
   (when *scroll-callback-p*
@@ -114,33 +118,46 @@
     (rect-draw :position (@ entity :pos)
                :size (@ entity :size)
                :color (@ entity :color)
-               :rotatation 0.0
+               :rotation 0.0
                :draw-mode :line-strip)))
 
 (defun draw-rect-spiral (&key
                            (n 10)
                            (current 0)
-                           (position (vec3 0.0 0.0 0.0))
-                           (size (vec2 100.0 100.0))
+                           (position (vec3f 0.0 0.0 0.0))
+                           (size (vec2f 100.0 100.0))
                            (rotation 0.0))
   (when (> n current)
-    (rect-draw
-     :position position
-     :size (vec2 (* (x-val size) (/ current n))
-                 (* (y-val size) (/ current n)))
-     :color (vec4 (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (* 2 pi)) (* 2 pi)))
-                  (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) pi) pi))
-                  (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
-                  (cfloat (mod (+ rotation (* 2 pi (/ current n))) 1.0)))
-     :rotation (+ rotation (* 2 pi (/ current n)))
-     :draw-center (vec3 0.5 0.5 0.0)
-     :draw-mode :triangle-strip)
+    (let ((ratio (cfloat (/ current n)))
+          (rotation (cfloat rotation)))
+      (rect-draw
+       :position position
+       :size (vec2f (* (x-val size)
+                       (cfloat (* ratio (+ 1 (/ (sin (/ (glfw:get-time) 2)) 2)))))
+                    (* (y-val size)
+                       (cfloat (* ratio (+ 1 (/ (sin (/ (glfw:get-time) 3)) 2))))))
+       ;; :color (vec4f (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (* 2 pi)) (* 2 pi)))
+       ;;               (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) pi) pi))
+       ;;               (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
+       ;;               (cfloat (mod (+ rotation (* 2 pi (/ current n))) 1.0)))
+
+       ;; :color (vec4f (cfloat (sin (* rotation ratio (/ pi 4))))
+       ;;               (cfloat (sin (* rotation ratio (/ pi 0.5))))
+       ;;               (cfloat (sin (* rotation ratio (/ pi 6))))
+       ;;               (cfloat (* (sin ratio) )))
+       :color (vec4f (cfloat (sin (* rotation (/ pi 6))))
+                     (cfloat (sin (* rotation (/ pi 4))))
+                     (cfloat (sin (* rotation (/ pi 3))))
+                     1.0)
+       :rotation rotation
+       :draw-center (vec3f 0.5 0.5 0.0)
+       :draw-mode :triangle-strip))
     (draw-rect-spiral
      :n n
      :current (1+ current)
-     :position position
+     :position (vec3f+ position (vec3f 1.0 -2.0 0.0))
      :size size
-     :rotation rotation)))
+     :rotation (+ rotation (sin (/ (glfw:get-time) 30))))))
 
 (defun render ()
   (gl:clear-color 0.0 0.0 0.0 0.25)
@@ -150,23 +167,24 @@
 
   (draw-rect-spiral :n 100
                     :current 0
-                    :position (vec3 400.0 300.0 0.0)
-                    :size (vec2 200.0 200.0)
+                    :position (vec3f 400.0 500.0 0.0)
+                    :size (vec2f 200.0 200.0)
                     :rotation (glfw:get-time))
-  (let ((text "\"What is love?\"")
+  (let ((text "meh")
         (font (get-font "sans24"))
-        (scale (vec2 1.0 1.00)))
+        (scale (vec2f 1.0 1.00)))
     (multiple-value-bind (x y) (text-dimensions text font
                                                 :scale scale)
       (text-draw text
                  font
-                 :position (vec2 (- *width* (cfloat x) 10) (- *height* (cfloat y) 10))
+                 :position (vec2f (- *width* (cfloat x) 10) (- *height* (cfloat y) 10))
                  :scale scale
-                 :color (vec4 0.0 0.61 1.0 0.5))))
+                 :color (vec4f 0.0 0.61 1.0 0.5))))
   (text-draw (format nil "~4f" (average-fps))
              (get-font "sans14")
-             :position (vec2 0.0 0.0)
-             :scale (vec2 0.8 0.8)))
+             :position (vec2f 0.0 0.0)
+             :draw-center (vec3f -0.5 -0.5 0.0)
+             :scale (vec2f 0.8 0.8)))
 
 (defun cleanup ()
   (clear-resources *program-manager*)
