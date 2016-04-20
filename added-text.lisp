@@ -4,21 +4,6 @@
 
 ;;; "added-text" goes here. Hacks and glory await!
 
-#|
-(defstruct screen
-  (hooks (empty-map)))
-
-(defmethod initialize-instance :after ((screen screen) &key)
-  t)
-
-(defmethod screen-add-hook ((screen screen) name hook)
-  (with! (@ (screen-hooks name) name)
-         (alexandria:appendf (@ (screen-hooks screen) name) hook)))
-
-(defmethod screen-run ((screen screen) name)
-  (mapcar #'funcall (@ (screen-hooks screen) name)))
-|#
-
 (defglobal *rect-depth* 0.0)
 
 (defun load-rect-drawer ()
@@ -131,11 +116,9 @@
     (let ((ratio (cfloat (/ current n)))
           (rotation (cfloat rotation)))
       (rect-draw
-       :position position
-       :size (vec2f (* (x-val size)
-                       (cfloat (* ratio (+ 1 (/ (sin (/ (glfw:get-time) 2)) 2)))))
-                    (* (y-val size)
-                       (cfloat (* ratio (+ 1 (/ (sin (/ (glfw:get-time) 3)) 2))))))
+       :position (vec3f+ position (vec3f 0.0 0.0 0.0))
+       :size (vec2f (* (x-val size) (cfloat ratio))
+                    (* (y-val size) (cfloat ratio)))
        ;; :color (vec4f (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (* 2 pi)) (* 2 pi)))
        ;;               (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) pi) pi))
        ;;               (cfloat (/ (mod (+ rotation (* 2 pi (/ current n))) (/ pi 4)) (/ pi 4)))
@@ -145,19 +128,19 @@
        ;;               (cfloat (sin (* rotation ratio (/ pi 0.5))))
        ;;               (cfloat (sin (* rotation ratio (/ pi 6))))
        ;;               (cfloat (* (sin ratio) )))
-       :color (vec4f (cfloat (sin (* rotation (/ pi 6))))
-                     (cfloat (sin (* rotation (/ pi 4))))
-                     (cfloat (sin (* rotation (/ pi 3))))
+       :color (vec4f (cfloat (sin (* rotation (/ pi 4))))
+                     (cfloat (sin (* rotation (/ pi 2))))
+                     (cfloat (sin (* rotation (/ pi 1))))
                      1.0)
-       :rotation rotation
-       :draw-center (vec3f 0.5 0.5 0.0)
-       :draw-mode :triangle-strip))
-    (draw-rect-spiral
-     :n n
-     :current (1+ current)
-     :position (vec3f+ position (vec3f 1.0 -2.0 0.0))
-     :size size
-     :rotation (+ rotation (sin (/ (glfw:get-time) 30))))))
+       :rotation (/ rotation 30)
+       ;; :draw-center (vec3f -0.5 -0.5 0.0)
+       :draw-mode :triangle-strip)
+      (draw-rect-spiral
+       :n n
+       :current (1+ current)
+       :position position
+       :size size
+       :rotation (+ (1+ rotation) (/ (glfw:get-time) 5))))))
 
 (defun render ()
   (gl:clear-color 0.0 0.0 0.0 0.25)
@@ -165,10 +148,10 @@
             :depth-buffer)
   (render-entities)
 
-  (draw-rect-spiral :n 100
+  (draw-rect-spiral :n 50
                     :current 0
-                    :position (vec3f 400.0 500.0 0.0)
-                    :size (vec2f 200.0 200.0)
+                    :position (vec3f 400.0 300.0 0.0)
+                    :size (vec2f 200.0 400.0)
                     :rotation (glfw:get-time))
   (let ((text "meh")
         (font (get-font "sans24"))
